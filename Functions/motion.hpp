@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <SDL2/SDL.h>
 #include <bits/stdc++.h>
 
@@ -13,11 +11,10 @@
 #define right_value 15
 #define left_value -15
 
-const int shot_limit = 5;
+const int shot_limit = 15;
 const int asteroid_limit = 50;
 
 using namespace std;
-// srand(time(0));
 
 class spaceship_class
 {
@@ -28,7 +25,7 @@ public:
     int dimension = 50;
     int lives = 3;
     int points = 0;
-    int point_val = 10;
+    int point_val = 1;
 
     int spawn_X = 475;
     int spawn_Y = 600;
@@ -46,9 +43,9 @@ public:
         if (y <= 50)
             y = 50;
 
-        else if (y >= Height - 50)
+        else if (y >= Height - 100)
         {
-            y = Height - 50;
+            y = Height - 100;
         }
     }
 
@@ -100,6 +97,26 @@ public:
 
         return 1;
     }
+
+    const char *PointString(const char a[])
+    {
+        stringstream temp;
+        temp << "SCORE : " << points;
+
+        a = temp.str().c_str();
+
+        return a;
+    }
+
+    const char *LivesDispayString(const char a[])
+    {
+        stringstream temp;
+        temp << "LIVES : " << lives;
+
+        a = temp.str().c_str();
+
+        return a;
+    }
 };
 
 class bullet
@@ -112,13 +129,16 @@ public:
     int speed = 20;
     int height = 20;
     int width = 30;
+    int relaod_start;
+    int reload_time = 5000;
+    bool reload = false;
 
     void update()
     {
         x += speed;
     }
 
-    void dec()
+    void declare()
     {
         on = false;
     }
@@ -149,13 +169,16 @@ public:
     int y;
     int length = 100;
     int width = 100;
+    int probability = 1000; // the more the less likely
+    int counter = 1;
     int speed = 5;
-    int probability = 2500; // the more the less likely
 
     void declare()
     {
         on = false;
         explode = false;
+        speed = 5;
+        probability = 1000;
     }
 
     bool probability_asteroid()
@@ -175,6 +198,22 @@ public:
     void update()
     {
         x -= speed;
+
+        counter++;
+
+        if (counter % 500 == 0)
+        {
+            speed++;
+            probability -= 50;
+            counter = 1;
+        }
+
+        if (explode == true and counter % 50 == 0)
+        {
+            explode = false;
+        }
+
+        // cout << speed << endl;
     }
 
     void turn_of()
@@ -201,9 +240,6 @@ public:
         int y1 = y + length;
         int y2 = y;
 
-        // int offsetL = length / 2;
-        // int offsetW = width / 2;
-
         if ((a.x <= x1 && a.x >= x2) && (a.y <= y1 && a.y >= y2) && on == true)
         {
             a.on = false;
@@ -225,8 +261,10 @@ public:
 
         if ((a.x <= x1 && a.x >= x2) && (a.y <= y1 && a.y >= y2) && on == true)
         {
+            explode = true;
             a.lives = a.lives - 1;
             a.on = false;
+            on = false;
         }
     }
 };

@@ -1,48 +1,40 @@
 #include "Functions/motion.hpp"
 #include "Functions/values.hpp"
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_mixer.h>
-#include <SDL2/SDL_ttf.h>
-
-enum
-{
-    RIGHT,
-    LEFT,
-    UP,
-    DOWN,
-    SPACE
-};
-bool state[] = {false, false, false, false, false};
+#include "Functions/Initialize.hpp"
 
 int main(int argv, char **args)
 {
-    SDL_Window *o;
-    SDL_Event e;
-    SDL_Rect spaceship_rect;
-    int i = 1;
-
+    // Initializations
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
     TTF_Init();
+    Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 5240);
 
-    o = SDL_CreateWindow("Space_Game",
-                         SDL_WINDOWPOS_UNDEFINED,
-                         SDL_WINDOWPOS_UNDEFINED,
-                         Width,
-                         Height,
-                         SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+    SDL_Event e;
 
-    // declaring renderer
-    Uint32 render_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
-    SDL_Renderer *rend = SDL_CreateRenderer(o, -1, render_flags);
+    SDL_Window *o = SDL_CreateWindow("Space_Game",
+                                     SDL_WINDOWPOS_UNDEFINED,
+                                     SDL_WINDOWPOS_UNDEFINED,
+                                     Width,
+                                     Height,
+                                     SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+
+    SDL_Renderer *rend = SDL_CreateRenderer(o, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+
+    int i = 1;
+
+    Mix_Music *music = Mix_LoadMUS("images/music1.mp3");
+
+    if (music == NULL)
+    {
+        cout << "no music";
+    }
+
+    Mix_PlayMusic(music, -1);
 
     // Corner Point text
 
     SDL_Rect ScoreBoardRect;
-    ScoreBoardRect.x = 50;
-    ScoreBoardRect.y = 50;
-    ScoreBoardRect.h = 50;
-    ScoreBoardRect.w = 100;
+    CreateRect(ScoreBoardRect, 50, 50, 0, 0);
 
     SDL_Surface *surface = IMG_Load("images/background.png");
     SDL_Texture *bg_texture = SDL_CreateTextureFromSurface(rend, surface);
@@ -73,22 +65,8 @@ int main(int argv, char **args)
     SDL_Texture *spaceship = SDL_CreateTextureFromSurface(rend, surface);
     SDL_FreeSurface(surface);
 
-    TTF_Font *sans = TTF_OpenFont("Sans.ttf", 50);
-    SDL_Color white = {255, 255, 0};
-
-    char name[100] = "hello";
-    SDL_Surface *PointSurface = TTF_RenderText_Solid(sans, name, white);
-    if (PointSurface == NULL)
-        cout << "point surface is null\n";
-    SDL_Texture *PointTexture = SDL_CreateTextureFromSurface(rend, PointSurface);
-    SDL_FreeSurface(PointSurface);
-
-    SDL_Color color = {0, 0, 0};
-    SDL_Surface *text_surface;
-    if (!(text_surface = TTF_RenderText_Solid(sans, "Hello World!", color)))
-    {
-        // handle error here, perhaps print TTF_GetError at least
-    }
+    TTF_Font *font = TTF_OpenFont("roboto.ttf", 24);
+    SDL_Color white = {255, 255, 255, 255};
 
     spaceship_class spaceship_game;
     spaceship_game.declare();
@@ -98,7 +76,7 @@ int main(int argv, char **args)
 
     for (int i = 0; i < shot_limit; i++)
     {
-        shot[i].dec();
+        shot[i].declare();
     }
 
     for (int i = 0; i < asteroid_limit; i++)
@@ -106,18 +84,13 @@ int main(int argv, char **args)
         obstacle[i].declare();
     }
 
-    // // The music that will be played
-    // Mix_Music *gMusic = NULL;
-
-    // // The sound effects that will be used
-    // Mix_Chunk *gScratch = NULL;
-    // Mix_Chunk *gHigh = NULL;
-    // Mix_Chunk *gMedium = NULL;
-    // Mix_Chunk *gLow = NULL;
+    SDL_Rect SpaceshipRect;
+    SpaceshipRect.h = spaceship_game.dimension;
+    SpaceshipRect.w = spaceship_game.dimension;
 
     while (i)
     {
-        SDL_Delay(10);
+        SDL_Delay(15);
 
         SDL_RenderCopy(rend, bg_texture, NULL, NULL);
 
@@ -127,69 +100,48 @@ int main(int argv, char **args)
         {
             if (e.type == SDL_QUIT)
                 i = 0;
+
+            else if (e.type == SDL_MOUSEMOTION)
+            {
+                spaceship_game.x = e.motion.x;
+                spaceship_game.y = e.motion.y;
+
+                SpaceshipRect.x = spaceship_game.x;
+                SpaceshipRect.y = spaceship_game.y;
+            }
+
             else if (e.type == SDL_KEYDOWN)
             {
                 switch (e.key.keysym.sym)
                 {
-                case SDLK_ESCAPE:
-                case SDLK_q:
-                    i = 0;
-                    break;
-                case SDLK_UP:
-                    state[UP] = true;
-                    break;
-                case SDLK_DOWN:
-                    state[DOWN] = true;
-                    break;
-                case SDLK_RIGHT:
-                    state[RIGHT] = true;
-                    break;
-                case SDLK_LEFT:
-                    state[LEFT] = true;
-                    break;
+
                 case SDLK_SPACE:
                 {
-                    state[SPACE] = true;
-                };
-                }
-
-                {
-                    if (state[UP])
+                    for (int i = 0; i < shot_limit; i++)
                     {
-                        spaceship_game.motion_up();
-                    }
-                    if (state[DOWN])
-                    {
-                        spaceship_game.motion_down();
-                    }
-                    if (state[LEFT])
-                    {
-                        spaceship_game.motion_left();
-                    }
-                    if (state[RIGHT])
-                    {
-                        spaceship_game.motion_right();
-                    }
-
-                    if (state[SPACE])
-                    {
-                        for (int i = 0; i < shot_limit; i++)
+                        if (shot[i].on == false and shot[0].reload == false)
                         {
-                            if (shot[i].turn_on() == true)
-                            {
-                                shot[i].x = spaceship_game.x;
-                                shot[i].y = spaceship_game.y;
-                                break;
-                            }
+                            shot[i].turn_on();
+                            shot[i].x = spaceship_game.x;
+                            shot[i].y = spaceship_game.y;
+                            break;
+                        }
+
+                        else if (i == shot_limit - 1 and shot[0].reload == false)
+                        {
+                            shot[0].reload = true;
+                            shot[0].relaod_start = SDL_GetTicks();
                         }
                     }
-                }
-            }
-            else if (e.type == SDL_KEYUP)
-            {
-                for (int i = 0; i < 5; ++i)
+
+                    break;
+                };
+
+                case SDLK_ESCAPE:
                 {
-                    state[i] = false;
+                    i = 0;
+                    break;
+                };
                 }
             }
         }
@@ -197,15 +149,22 @@ int main(int argv, char **args)
         // Bullet
         for (int i = 0; i < shot_limit; i++)
         {
+            if (shot[0].reload == true)
+            {
+                if (SDL_GetTicks() - shot[0].relaod_start >= shot[0].reload_time)
+                {
+                    shot[0].reload = false;
+
+                    for (int i = 0; i < shot_limit; i++)
+                    {
+                        shot[i].on = false;
+                    }
+                }
+            }
+
             if (shot[i].on == true)
             {
                 SDL_Rect a;
-
-                if (shot[i].x >= Width)
-                {
-                    shot[i].on = false;
-                    continue;
-                }
 
                 a.x = shot[i].x;
                 a.y = shot[i].y + 15;
@@ -248,8 +207,6 @@ int main(int argv, char **args)
 
                 else if (obstacle[i].explode)
                     SDL_RenderCopy(rend, explosion_texture, NULL, &a);
-
-                obstacle[i].update();
             }
 
             // check if bullet hits asteroid
@@ -265,20 +222,40 @@ int main(int argv, char **args)
 
             // check if asteroid hit spaceship
             obstacle[i].collide_spaceship(spaceship_game);
+            obstacle[i].update();
         }
 
-        // SDL_RenderCopy(rend, PointTexture, NULL, &ScoreBoardRect);
+        char points[10];
+        char lives[10];
 
         if (spaceship_game.on == true)
         {
-            SDL_Rect a;
-            a.x = spaceship_game.x;
-            a.y = spaceship_game.y;
+            // Printing Score
+            SDL_Rect ScoreBoardRect;
+            CreateRect(ScoreBoardRect, 50, 120, 0, 0);
+            surface = TTF_RenderText_Solid(font, spaceship_game.PointString(points), white);
+            SDL_Texture *PointTexture = SDL_CreateTextureFromSurface(rend, surface);
+            SDL_RenderCopy(rend, PointTexture, NULL, &ScoreBoardRect);
+            SDL_FreeSurface(surface);
 
-            a.h = spaceship_game.dimension;
-            a.w = spaceship_game.dimension;
+            // Printing Lives
+            SDL_Rect LivesDisplayRect;
+            CreateRect(LivesDisplayRect, 50, 100, 400, 0);
+            surface = TTF_RenderText_Solid(font, spaceship_game.LivesDispayString(lives), white);
+            SDL_Texture *LivesTexture = SDL_CreateTextureFromSurface(rend, surface);
+            SDL_RenderCopy(rend, LivesTexture, NULL, &LivesDisplayRect);
+            SDL_FreeSurface(surface);
 
-            SDL_RenderCopy(rend, spaceship, NULL, &a);
+            // Reloading
+            if (shot[0].reload == true)
+            {
+                SDL_Rect ReloadingReqt;
+                CreateRect(ReloadingReqt, 50, 100, 800, 0);
+                surface = TTF_RenderText_Solid(font, "RELOADING...", white);
+                SDL_Texture *ReloadingTexture = SDL_CreateTextureFromSurface(rend, surface);
+                SDL_RenderCopy(rend, ReloadingTexture, NULL, &ReloadingReqt);
+                SDL_FreeSurface(surface);
+            }
         }
 
         else
@@ -286,6 +263,7 @@ int main(int argv, char **args)
 
         if (spaceship_game.CheckLives())
         {
+            SDL_Delay(3000);
             SDL_RenderClear(rend);
             SDL_RenderCopy(rend, GameOver_texture, NULL, NULL);
             SDL_RenderPresent(rend);
@@ -293,11 +271,21 @@ int main(int argv, char **args)
 
             spaceship_game.on = false;
             spaceship_game.declare();
+
+            for (int i = 0; i < shot_limit; i++)
+            {
+                shot[i].declare();
+            }
+
+            for (int i = 0; i < asteroid_limit; i++)
+            {
+                obstacle[i].declare();
+            }
         }
 
         else
         {
-            SDL_RenderCopy(rend, PointTexture, NULL, &ScoreBoardRect);
+            SDL_RenderCopy(rend, spaceship, NULL, &SpaceshipRect);
             SDL_RenderPresent(rend);
         }
 
@@ -306,6 +294,7 @@ int main(int argv, char **args)
 
     SDL_DestroyWindow(o);
     SDL_DestroyRenderer(rend);
+    TTF_Quit();
     SDL_Quit();
 
     return 0;
